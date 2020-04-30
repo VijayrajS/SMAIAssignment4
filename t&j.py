@@ -10,7 +10,6 @@ from keras.optimizers import RMSprop
 
 epochs = 80
 
-# the data, split between train and test sets
 import os
 path = 'Datasets/TomJerry/'
 
@@ -18,37 +17,42 @@ train_df = pd.read_csv(path+'train.csv')
 x_img_names = list(train_df['image_file'])
 
 from PIL import Image, ImageOps
+from skimage import color
+
 def img2array(file_):
-    u = ImageOps.fit(Image.open(file_), (300, 300), method=Image.ANTIALIAS)
-    return np.array(u)
+    u = ImageOps.fit(Image.open(file_), (200, 200), method=Image.ANTIALIAS)
+    u = color.rgb2gray(np.array(u))
+    return u
+
+print('x2')
 
 x_train = np.array([img2array(path+'ntrain/'+x+'.jpg') for x in x_img_names])
+img_rows=x_train[0].shape[0]
+img_cols=x_train[0].shape[1]
+x_train=x_train.reshape(x_train.shape[0],img_rows,img_cols,1)
 y_train = np.array(train_df['emotion'])
+print('x3')
 
 x_train = x_train/255
 y_train = keras.utils.to_categorical(y_train, 5)
 
+print('x4')
+
+from keras.applications.vgg16 import VGG16
+from keras.models import Model
+from keras.layers import Input, BatchNormalization
+from keras.regularizers import l2
 
 model = Sequential()
-model.add(Conv2D(128, kernel_size=(3, 3),  activation='relu', input_shape=(360,640,3)))
-model.add(Conv2D(64, kernel_size=(3, 3),  activation='relu'))
-model.add(Conv2D(32, (3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.2))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.2))
-model.add(Flatten())
-model.add(Dense(128, activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(69, activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(10, activation='sigmoid'))
+
+model.add(Dense(5, activation='softmax'))
 
 model.compile(loss='categorical_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
+print('x5')
 
-_ = model.fit(X_train, y_train, epochs=epochs, verbose=1, validation_split=0.1)
+_ = model.fit(x_train, y_train, epochs=epochs, verbose=1, validation_split=0.1)
 
 score = model.evaluate(x_test, y_test, verbose=1)
 
